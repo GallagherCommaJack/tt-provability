@@ -10,6 +10,7 @@ open import Relation.Nullary public
 open import Data.Product public hiding (map) hiding (zip)
 open import Data.List public
 open import Function public
+open import Data.Empty public
 
 --------------------------------------------------------------
 -- unsafe
@@ -138,22 +139,6 @@ aptot f refl = refl
 Σ=1' refl = refl
 
 --------------------------------------------------------------
--- top
---------------------------------------------------------------
-
-record ⊤ : Set where
-  constructor tt
-
---------------------------------------------------------------
--- bottom
---------------------------------------------------------------
-
-data ⊥ : Set where
-
-⊥-elim : {A : Set} → ⊥ → A
-⊥-elim ()
-
---------------------------------------------------------------
 -- disjoint union
 --------------------------------------------------------------
 
@@ -217,6 +202,8 @@ suc-inj refl = refl
 ≤-refl {0} = z≤n
 ≤-refl {suc n} = s≤s ≤-refl
 
+infixl 5 _≤-trans_
+
 _≤-trans_ : ∀ {x y z} → x ≤ y → y ≤ z → x ≤ z
 z≤n ≤-trans p2 = z≤n
 s≤s p1 ≤-trans s≤s p2 = s≤s (p1 ≤-trans p2)
@@ -269,3 +256,7 @@ trich n m with compare n m
 trich n .(suc (n + k)) | less .n k = tri< ≤-+r (n ≠Sn+ k) (<-nosym ≤-+r)
 trich n .n | equal .n = tri≈ <-noref refl <-noref
 trich .(suc (m + k)) m | greater .m k = tri> (<-nosym ≤-+r) ((m ≠Sn+ k) ∘ sym) ≤-+r
+
+≤-irrel : ∀ {n m} (p1 p2 : n ≤ m) → p1 ≡ p2
+≤-irrel z≤n z≤n = refl
+≤-irrel (s≤s p1) (s≤s p2) = cong s≤s (≤-irrel p1 p2)
