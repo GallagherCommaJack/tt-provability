@@ -2,7 +2,14 @@
 
 module lib where
 
-open import Level renaming (zero to lzero)
+open import Data.Nat public
+open import Relation.Binary public
+open import Relation.Binary.Core public
+open import Relation.Binary.PropositionalEquality public renaming ([_] to ⟨_⟩)
+open import Relation.Nullary public
+open import Data.Product public hiding (map) hiding (zip)
+open import Data.List public
+open import Function public
 
 --------------------------------------------------------------
 -- unsafe
@@ -15,17 +22,10 @@ undefined = undefined
 -- equality
 --------------------------------------------------------------
 
-data _≡_ {i}{A : Set i} (x : A) : A → Set i where
-  refl : x ≡ x
-{-# BUILTIN EQUALITY _≡_ #-}
-{-# BUILTIN REFL refl #-}
-
-infix 4 _≡_
+{-# BUILTIN REWRITE _≡_ #-}
 
 _◾_ : ∀{i}{A : Set i}{x y z : A} → x ≡ y → y ≡ z → x ≡ z
 refl ◾ refl = refl
-
-{-# BUILTIN REWRITE _≡_ #-}
 
 infixl 4 _◾_
 
@@ -100,16 +100,6 @@ coe2r refl p = p
 -- sigma
 --------------------------------------------------------------
 
-record Σ {i j} (A : Set i) (B : A → Set j) : Set (i ⊔ j) where
-  constructor _,_
-  field
-    proj₁ : A
-    proj₂ : B proj₁
-
-infixl 5 _,_
-
-open Σ public
-
 aptot : ∀{i}{A : Set i}{B : A → Set}(f : (x : A) → B x){a₀ a₁ : A}(a₂ : a₀ ≡ a₁)
     → _≡_ {A = Σ Set λ X → X} (B a₀ , f a₀) (B a₁ , f a₁)
 aptot f refl = refl
@@ -146,9 +136,6 @@ aptot f refl = refl
 Σ=1' : {A₀ A₁ : Set}{a₀ : A₀}{a₁ : A₁}
      → (p : (A₀ , a₀) ≡ (A₁ , a₁)) → a₀ ≡[ Σ=0 p ]≡ a₁
 Σ=1' refl = refl
-
-_×_ : Set → Set → Set
-A × B = Σ A λ _ → B
 
 --------------------------------------------------------------
 -- top
@@ -204,23 +191,81 @@ if_then_else_ : ∀ {i} {B : Bool → Set i} (b : Bool) → B tt → B ff → B 
 if tt then pt else pf = pt
 if ff then pt else pf = pf
 
-data ℕ : Set where
-  zero : ℕ
-  succ : ℕ → ℕ
+--------------------------------------------------------------
+-- nats
+--------------------------------------------------------------
 
-{-# BUILTIN NATURAL ℕ #-}
+-- some basic identities
++0r : ∀ n → n + zero ≡ n
++0r zero = refl
++0r (suc n) = cong suc (+0r n)
 
-data List (A : Set) : Set where
-  [] : List A
-  _∷_ : A → List A → List A
+_+S_ : ∀ n m → n + suc m ≡ suc (n + m)
+zero +S m = refl
+suc n +S m = cong suc (n +S m)
 
-data Vec (A : Set) : ℕ → Set where
-  [] : Vec A 0
-  _∷_ : A → ∀ {n} → Vec A n → Vec A (succ n)
+-- injectivity
+suc-inj : ∀ {n m} → suc n ≡ suc m → n ≡ m
+suc-inj refl = refl
 
-data _≤_ (n : ℕ) : ℕ → Set where
-  le-refl : n ≤ n
-  le-step : ∀ {m} → n ≤ m → n ≤ (succ m)
+-- ordering
+≤-step : ∀ {n m} → n ≤ m → n ≤ suc m
+≤-step z≤n = z≤n
+≤-step (s≤s p) = s≤s (≤-step p)
 
-fin : ℕ → Set
-fin n = Σ ℕ (λ m → m ≤ n)
+≤-refl : ∀ {n} → n ≤ n
+≤-refl {0} = z≤n
+≤-refl {suc n} = s≤s ≤-refl
+
+_≤-trans_ : ∀ {x y z} → x ≤ y → y ≤ z → x ≤ z
+z≤n ≤-trans p2 = z≤n
+s≤s p1 ≤-trans s≤s p2 = s≤s (p1 ≤-trans p2)
+
+le'-le : _≤′_ ⇒ _≤_
+le'-le ≤′-refl = ≤-refl
+le'-le (≤′-step p) = ≤-step (le'-le p)
+
+le''-le' : _≤″_ ⇒ _≤′_
+le''-le' {i} (less-than-or-equal {0} refl) rewrite +0r i = ≤′-refl
+le''-le' {i} (less-than-or-equal {suc k} refl) rewrite i +S k = ≤′-step (le''-le' (less-than-or-equal refl))
+
+le-le'' : _≤_ ⇒ _≤″_
+le-le'' z≤n = less-than-or-equal refl
+le-le'' (s≤s p) with le-le'' p
+le-le'' (s≤s p) | less-than-or-equal proof = less-than-or-equal (cong suc proof)
+
+le''-le : _≤″_ ⇒ _≤_
+le''-le p = le'-le (le''-le' p)
+
+le'-le'' : _≤′_ ⇒ _≤″_
+le'-le'' p = le-le'' (le'-le p)
+
+le-le' : _≤_ ⇒ _≤′_
+le-le' p = le''-le' (le-le'' p)
+
+≤-+r : ∀ {n k} → n ≤ n + k
+≤-+r = le''-le (less-than-or-equal refl)
+
+≤-+l : ∀ {n k} → n ≤ k + n
+≤-+l {k = 0} = ≤-refl
+≤-+l {k = suc k} = ≤-step (≤-+l {k = k})
+
+_≠Sn+_ : ∀ n k → n ≢ suc n + k
+_≠Sn+_ 0 k ()
+_≠Sn+_ (suc n) k p = (n ≠Sn+ k) (suc-inj p)
+
+_≤-antisym_ : ∀ {n m} → n ≤ m → m ≤ n → n ≡ m
+z≤n ≤-antisym z≤n = refl
+s≤s p1 ≤-antisym s≤s p2 = cong suc (p1 ≤-antisym p2)
+
+<-nosym : ∀ {n m} → n < m → n ≯ m
+<-nosym (s≤s p1) (s≤s p2) = <-nosym p1 p2
+
+<-noref : ∀ {n} → n ≮ n
+<-noref (s≤s p) = <-noref p
+
+trich : Trichotomous _≡_ _<_
+trich n m with compare n m
+trich n .(suc (n + k)) | less .n k = tri< ≤-+r (n ≠Sn+ k) (<-nosym ≤-+r)
+trich n .n | equal .n = tri≈ <-noref refl <-noref
+trich .(suc (m + k)) m | greater .m k = tri> (<-nosym ≤-+r) ((m ≠Sn+ k) ∘ sym) ≤-+r
