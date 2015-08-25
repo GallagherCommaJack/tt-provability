@@ -1,6 +1,6 @@
 -- Uses the syntax representation from http://www.cs.nott.ac.uk/~txa/publ/tt-in-tt.pdf with added Löbian constructors as suggested by Jason Gross
 {-# OPTIONS --without-K --no-eta #-}
-module Syntax.Def where
+module Syntax.Typed.Def where
 open import lib
 
 -- types of the syntax

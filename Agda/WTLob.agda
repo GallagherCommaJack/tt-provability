@@ -1,5 +1,5 @@
-module Lob where
-open import Syntax.Def
+module WTLob where
+open import Syntax.Typed.Def
 open import lib
 
 -- so missing Lean's calc environment right now...
