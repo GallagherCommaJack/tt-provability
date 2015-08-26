@@ -80,8 +80,11 @@ J P pr refl = pr
 J' : {A : Set} (P : {x y : A} → x ≡ y → Set) → (∀ {x} → P {x} {x} refl) → {x y : A} (w : x ≡ y) → P w
 J' P pr w = J P pr w
 
-≡inv : {A : Set} {x y : A} (p : x ≡ y) → (p ◾ p ⁻¹) ≡ refl
-≡inv refl = refl
+≡inv-r : ∀{i}{A : Set i} {x y : A} (p : x ≡ y) → (p ◾ p ⁻¹) ≡ refl
+≡inv-r refl = refl
+
+≡inv-l : ∀{i}{A : Set i} {x y : A} (p : x ≡ y) → (p ⁻¹ ◾ p) ≡ refl
+≡inv-l refl = refl
 
 coeap2 : {A : Set}{B : A → Set}{a₀ a₁ : A}(a₂ : a₀ ≡ a₁){t : B a₁}
        → coe (ap B a₂) (coe (ap B (a₂ ⁻¹)) t) ≡ t
@@ -96,6 +99,29 @@ coe2r : ∀{i j}{A : Set i}{B : A → Set j}{a₀ a₁ : A}
         (a₂ : a₀ ≡ a₁){b₀ : B a₀}{b₁ : B a₁}
       → b₀ ≡[ ap B a₂ ]≡ b₁ → b₀ ≡ coe (ap B (a₂ ⁻¹)) b₁
 coe2r refl p = p
+
+match_withl_withr_ : ∀ {i j}{X : Set i}{Y : Set j} → (Dec X) → (X → Y) → (¬ X → Y) → Y
+match yes p withl p1 withr p2 = p1  p
+match no ¬p withl p1 withr p2 = p2 ¬p
+
+hedberg : ∀ {i}{A : Set i} → ((x y : A) → Dec (x ≡ y)) → {x y : A} → (p q : x ≡ y) → p ≡ q
+hedberg {i} {A} d {x} {.x} refl q with d x x | lemma q
+                                  where T : {x y : A} → x ≡ y → Set i
+                                        T {x} {y} p = match d x y withl (λ b → match d x x withl (λ b' → p ≡ (b' ⁻¹ ◾ b))
+                                                                                           withr (λ ¬p → ⊥-elim (¬p refl)))
+                                                                  withr (λ ¬b → ⊥-elim (¬b p))
+                                        lemma : {x y : A} → (p : x ≡ y) → T p
+                                        lemma {x} refl with (d x x)
+                                        lemma refl | yes p = ≡inv-l p ⁻¹
+                                        lemma refl | no ¬p = ⊥-elim (¬p refl)
+hedberg d refl .(p ⁻¹ ◾ p) | yes p | refl = ≡inv-l p ⁻¹
+hedberg d refl q | no ¬p | _ = ⊥-elim (¬p q)
+
+ℕ≡irrel : ∀ {x y : ℕ} → (p q : x ≡ y) → p ≡ q
+ℕ≡irrel = hedberg _≟_
+
+ℕK : ∀ {x : ℕ}(p : x ≡ x) → p ≡ refl
+ℕK p = ℕ≡irrel p refl
 
 --------------------------------------------------------------
 -- sigma
@@ -176,6 +202,9 @@ if_then_else_ : ∀ {i} {B : Bool → Set i} (b : Bool) → B tt → B ff → B 
 if tt then pt else pf = pt
 if ff then pt else pf = pf
 
+¬-prop : ∀ {i}{X : Set i}(f g : ¬ X) → f ≡ g
+¬-prop f g = funext (λ x → ⊥-elim (f x))
+
 --------------------------------------------------------------
 -- nats
 --------------------------------------------------------------
@@ -251,12 +280,33 @@ s≤s p1 ≤-antisym s≤s p2 = cong suc (p1 ≤-antisym p2)
 <-noref : ∀ {n} → n ≮ n
 <-noref (s≤s p) = <-noref p
 
-trich : Trichotomous _≡_ _<_
-trich n m with compare n m
-trich n .(suc (n + k)) | less .n k = tri< ≤-+r (n ≠Sn+ k) (<-nosym ≤-+r)
-trich n .n | equal .n = tri≈ <-noref refl <-noref
-trich .(suc (m + k)) m | greater .m k = tri> (<-nosym ≤-+r) ((m ≠Sn+ k) ∘ sym) ≤-+r
+≤-trich : Trichotomous _≡_ _<_
+≤-trich n m with compare n m
+≤-trich n .(suc (n + k)) | less .n k = tri< ≤-+r (n ≠Sn+ k) (<-nosym ≤-+r)
+≤-trich n .n | equal .n = tri≈ <-noref refl <-noref
+≤-trich .(suc (m + k)) m | greater .m k = tri> (<-nosym ≤-+r) ((m ≠Sn+ k) ∘ sym) ≤-+r
 
 ≤-irrel : ∀ {n m} (p1 p2 : n ≤ m) → p1 ≡ p2
 ≤-irrel z≤n z≤n = refl
 ≤-irrel (s≤s p1) (s≤s p2) = cong s≤s (≤-irrel p1 p2)
+
+<-noref-j : {x y : ℕ} → x < y → x ≢ y
+<-noref-j p refl = <-noref p
+
+≤-trich-c1 : ∀ {n m} (p : n < m) → ≤-trich n m ≡ tri< p (<-noref-j p) (<-nosym p)
+≤-trich-c1 {n} {m} p with ≤-trich n m
+≤-trich-c1 p | tri< a ¬b ¬c rewrite ≤-irrel p a | ¬-prop (<-noref-j a) ¬b | ¬-prop (<-nosym a) ¬c = refl
+≤-trich-c1 p | tri≈ ¬a b ¬c = ⊥-elim (¬a p)
+≤-trich-c1 p | tri> ¬a ¬b c = ⊥-elim (¬a p)
+
+≤-trich-c2 : ∀ {n} → ≤-trich n n ≡ tri≈ <-noref refl <-noref
+≤-trich-c2 {n} with ≤-trich n n
+≤-trich-c2 | tri< a ¬b ¬c = ⊥-elim (¬b refl)
+≤-trich-c2 | tri≈ ¬a b ¬c rewrite ¬-prop ¬a <-noref | ℕ≡irrel b refl | ¬-prop ¬c <-noref = refl
+≤-trich-c2 | tri> ¬a ¬b c = ⊥-elim (¬b refl)
+
+≤-trich-c3 : ∀ {n m} (p : n > m) → ≤-trich n m ≡ tri> (<-nosym p) (<-noref-j p ∘ _⁻¹) p
+≤-trich-c3 {n} {m} p with ≤-trich n m
+≤-trich-c3 p | tri< a ¬b ¬c = ⊥-elim (¬c p)
+≤-trich-c3 p | tri≈ ¬a b ¬c = ⊥-elim (¬c p)
+≤-trich-c3 p | tri> ¬a ¬b c rewrite ¬-prop ¬a (<-nosym p) | ¬-prop ¬b (<-noref-j p ∘ _⁻¹) | ≤-irrel p c = refl
