@@ -19,10 +19,18 @@ open import Data.Empty public
 undefined : ∀ {i}{A : Set i} → A
 undefined = undefined
 
+⋆⋆sorry⋆⋆ = undefined
+⋆⋆TODO⋆⋆ = ⋆⋆sorry⋆⋆
+
+--------------------------------------------------------------
+-- unit
+--------------------------------------------------------------
+record ⊤ : Set where
+  constructor tt
+
 --------------------------------------------------------------
 -- equality
 --------------------------------------------------------------
-
 {-# BUILTIN REWRITE _≡_ #-}
 
 _◾_ : ∀{i}{A : Set i}{x y z : A} → x ≡ y → y ≡ z → x ≡ z
@@ -228,7 +236,7 @@ suc-inj refl = refl
 ≤-step (s≤s p) = s≤s (≤-step p)
 
 ≤-refl : ∀ {n} → n ≤ n
-≤-refl {0} = z≤n
+≤-refl {zero} = z≤n
 ≤-refl {suc n} = s≤s ≤-refl
 
 infixl 5 _≤-trans_
@@ -277,8 +285,12 @@ s≤s p1 ≤-antisym s≤s p2 = cong suc (p1 ≤-antisym p2)
 <-nosym : ∀ {n m} → n < m → n ≯ m
 <-nosym (s≤s p1) (s≤s p2) = <-nosym p1 p2
 
+≤<-nosym : ∀ {n m} → n ≥ m → n ≮ m
+≤<-nosym z≤n ()
+≤<-nosym (s≤s p1) (s≤s p2) = ≤<-nosym p1 p2
+
 <-noref : ∀ {n} → n ≮ n
-<-noref (s≤s p) = <-noref p
+<-noref p = <-nosym p p
 
 ≤-trich : Trichotomous _≡_ _<_
 ≤-trich n m with compare n m
@@ -310,3 +322,13 @@ s≤s p1 ≤-antisym s≤s p2 = cong suc (p1 ≤-antisym p2)
 ≤-trich-c3 p | tri< a ¬b ¬c = ⊥-elim (¬c p)
 ≤-trich-c3 p | tri≈ ¬a b ¬c = ⊥-elim (¬c p)
 ≤-trich-c3 p | tri> ¬a ¬b c rewrite ¬-prop ¬a (<-nosym p) | ¬-prop ¬b (<-noref-j p ∘ _⁻¹) | ≤-irrel p c = refl
+
+≤?-c1 : ∀ {n m} (p : n ≤ m) → (n ≤? m) ≡ yes p
+≤?-c1 {n} {m} p with n ≤? m
+... | yes q = ap yes (≤-irrel q p)
+... | no ¬q = ⊥-elim (¬q p)
+
+≤?-c2 : ∀ {n m} (p : n ≰ m) → (n ≤? m) ≡ no p
+≤?-c2 {n} {m} ¬p with n ≤? m
+... | yes q = ⊥-elim (¬p q)
+... | no ¬q = ap no (¬-prop ¬q ¬p)
