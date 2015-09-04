@@ -2,40 +2,28 @@
 module Syntax.Untyped.Def where
 open import lib
 
--- data Tree (X : Set) : Set where
---   br : Tree X → Tree X → Tree X
---   leaf : X → Tree X
-
--- indtree : {X : Set} → (P : Tree X → Set)
---         → ((s t : Tree X) → P s → P t → P (br s t))
---         → ((x : X) → P (leaf x))
---         → (t : Tree X) → P t
--- indtree P b l (br s t) = b s t (indtree P b l s) (indtree P b l t)
--- indtree P b l (leaf x) = l x
-
 infixl 100 _⊛_
 infix 50 _⊕_
 infix 1000 *_
+
 data Ptm : Set where
   typ : ℕ → Ptm
   bot : Ptm
+  exf : Ptm → Ptm
   top : Ptm
   unt : Ptm
-  pi : (X P : Ptm) → Ptm
-  lam : (X b : Ptm) → Ptm
-  sig : (X P : Ptm) → Ptm
+  pi  : Ptm → Ptm → Ptm
+  lam : Ptm → Ptm → Ptm
+  _⊛_ : Ptm → Ptm → Ptm
+  sig : Ptm → Ptm → Ptm
   smk : Ptm → Ptm → Ptm
   pi1 : Ptm → Ptm
   pi2 : Ptm → Ptm
-  _⊛_ : (f x : Ptm) → Ptm -- app
   τ : Ptm -- tree
   ℓ : Ptm -- leaf
-  _⊕_ : (l r : Ptm) → Ptm -- branch
-  ind : (P l b : Ptm) → Ptm
-  exf : Ptm → Ptm
+  _⊕_ : Ptm → Ptm → Ptm -- branch
+  ind : (P lc bc : Ptm) → Ptm
   *_  : ℕ → Ptm -- var
-
-‘λ→’ = lam
 
 infixl 1 _|>_
 _|>_ : ∀ {i j}{X : Set i}{P : X → Set j}
@@ -91,8 +79,8 @@ data subst-rel (d : ℕ) (v : Ptm) : Ptm → Ptm → Set where
   s-ind : ∀ {P P' l l' b b'} → subst-rel (suc d) (w v) P P' → subst-rel d v l l' → subst-rel d v b b' → subst-rel d v (ind P l b) (ind P' l' b')
   s-exf : ∀ {X X'} → subst-rel d v X X' → subst-rel d v (exf X) (exf X')
   s-var-eq : subst-rel d v (* d) v
-  s-var-le : ∀ {i} → d < i → subst-rel d v (* i) (* pred i)
-  s-var-ge : ∀ {i} → d > i → subst-rel d v (* i) (* i)
+  s-var-lt : ∀ {i} → d < i → subst-rel d v (* i) (* pred i)
+  s-var-gt : ∀ {i} → d > i → subst-rel d v (* i) (* i)
 
 subst-fun : (d : ℕ) (v : Ptm) (e : Ptm) → Σ[ e' ∈ Ptm ] subst-rel d v e e'
 subst-fun d v (typ x) = (typ x) , s-typ
@@ -122,9 +110,9 @@ subst-fun d v (ind P l b) with subst-fun (suc d) (w v) P | subst-fun d v l | sub
 subst-fun d v (exf P) with subst-fun d v P
 ... | P' , pP' = exf P' , s-exf pP'
 subst-fun d v (* i) with ≤-trich d i
-subst-fun d v (* i) | tri< a ¬b ¬c = (* pred i) , s-var-le a
+subst-fun d v (* i) | tri< a ¬b ¬c = (* pred i) , s-var-lt a
 subst-fun d v (* .d) | tri≈ ¬a refl ¬c = v , s-var-eq
-subst-fun d v (* i) | tri> ¬a ¬b c = * i , s-var-ge c
+subst-fun d v (* i) | tri> ¬a ¬b c = * i , s-var-gt c
 
 subst-v : ℕ → Ptm → Ptm → Ptm
 subst-v d v e = proj₁ (subst-fun d v e)
@@ -185,11 +173,6 @@ _⇨_ = pi
 
 Con : Set
 Con = List Ptm
-
-lookup : ∀ {l}{X : Set l} i (xs : List X) → i < length xs → X
-lookup i [] ()
-lookup zero (x ∷ xs) (s≤s p) = x
-lookup (suc i) (x ∷ xs) (s≤s p) = lookup i xs p
 
 lookup-w : ∀ i (Γ : Con) → i < length Γ → Ptm
 lookup-w i [] ()

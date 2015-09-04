@@ -1,32 +1,41 @@
 {-# OPTIONS --without-K #-}
 
 module lib where
-
+open import Level public renaming (_⊔_ to lmax; suc to lsuc; zero to lzero; lift to ulift)
 open import Data.Nat public
 open import Relation.Binary public
 open import Relation.Binary.Core public
 open import Relation.Binary.PropositionalEquality public renaming ([_] to ⟨_⟩)
 open import Relation.Nullary public
-open import Data.Product public hiding (map) hiding (zip)
+open import Data.Product public hiding (map; zip)
 open import Data.List public
 open import Function public
 open import Data.Empty public
+open import Data.Maybe.Base public hiding (map)
 
 --------------------------------------------------------------
 -- unsafe
 --------------------------------------------------------------
-{-# NON_TERMINATING #-}
-undefined : ∀ {i}{A : Set i} → A
-undefined = undefined
-
-⋆⋆sorry⋆⋆ = undefined
-⋆⋆TODO⋆⋆ = ⋆⋆sorry⋆⋆
+postulate ⋆⋆TODO⋆⋆ : ∀ {i}{A : Set i} → A
 
 --------------------------------------------------------------
 -- unit
 --------------------------------------------------------------
 record ⊤ : Set where
   constructor tt
+
+--------------------------------------------------------------
+-- level
+--------------------------------------------------------------
+levelℕ : ℕ → Level
+levelℕ zero = lzero
+levelℕ (suc n) = lsuc (levelℕ n)
+
+--------------------------------------------------------------
+-- pi
+--------------------------------------------------------------
+Π : ∀{i j}(A : Set i) → (A → Set j) → Set (lmax i j)
+Π A B = (x : A) → B x
 
 --------------------------------------------------------------
 -- equality
@@ -245,6 +254,9 @@ _≤-trans_ : ∀ {x y z} → x ≤ y → y ≤ z → x ≤ z
 z≤n ≤-trans p2 = z≤n
 s≤s p1 ≤-trans s≤s p2 = s≤s (p1 ≤-trans p2)
 
+le-of-lt : ∀ {x y} → x < y → x ≤ y
+le-of-lt (s≤s p) = ≤-step p
+
 le'-le : _≤′_ ⇒ _≤_
 le'-le ≤′-refl = ≤-refl
 le'-le (≤′-step p) = ≤-step (le'-le p)
@@ -332,3 +344,30 @@ s≤s p1 ≤-antisym s≤s p2 = cong suc (p1 ≤-antisym p2)
 ≤?-c2 {n} {m} ¬p with n ≤? m
 ... | yes q = ⊥-elim (¬p q)
 ... | no ¬q = ap no (¬-prop ¬q ¬p)
+
+--------------------------------------------------------------
+-- Trees
+--------------------------------------------------------------
+infix 25 _⊕_
+data Tree : Set where
+  _⊕_ : Tree → Tree → Tree
+  ℓ : Tree
+
+tree-ind : ∀{i}(P : Tree → Set i)
+           → P ℓ
+           → ((l r : Tree) → P l → P r → P (l ⊕ r))
+           → (t : Tree) → P t
+tree-ind P pl pb (l ⊕ r) = pb l r (tree-ind P pl pb l) (tree-ind P pl pb r)
+tree-ind P pl pb ℓ = pl
+--------------------------------------------------------------
+-- Lists
+--------------------------------------------------------------
+lookup : ∀ {i} {X : Set i} → ℕ → List X → Maybe X
+lookup n [] = nothing
+lookup zero (x ∷ xs) = just x
+lookup (suc n) (x ∷ xs) = lookup n xs
+
+lookup-le : ∀ {l}{X : Set l} i (xs : List X) → i < length xs → X
+lookup-le i [] ()
+lookup-le zero (x ∷ xs) (s≤s p) = x
+lookup-le (suc i) (x ∷ xs) (s≤s p) = lookup-le i xs p
