@@ -3,6 +3,27 @@ module Syntax.Untyped.Subst-Lemmas where
 open import lib
 open import Syntax.Untyped.Def
 
+subst-uq : ∀ {d v e e'} → subst-rel d v e e' → subst-v d v e ≡ e'
+subst-uq s-typ = refl
+subst-uq s-bot = refl
+subst-uq s-top = refl
+subst-uq s-unt = refl
+subst-uq (s-pip sA sB) rewrite subst-uq sA | subst-uq sB = refl
+subst-uq (s-lam sA sb) rewrite subst-uq sA | subst-uq sb = refl
+subst-uq (s-sig sA sB) rewrite subst-uq sA | subst-uq sB = refl
+subst-uq (s-smk sa sb) rewrite subst-uq sa | subst-uq sb = refl
+subst-uq (s-pi1 sab) = ap pi1 (subst-uq sab)
+subst-uq (s-pi2 sab) = ap pi2 (subst-uq sab)
+subst-uq (s-app sf sx) rewrite subst-uq sf | subst-uq sx = refl
+subst-uq s-btr = refl
+subst-uq s-ell = refl
+subst-uq (s-brc sl sr) rewrite subst-uq sl | subst-uq sr = refl
+subst-uq (s-ind sP slc sbc) rewrite subst-uq sP | subst-uq slc | subst-uq sbc = refl
+subst-uq (s-exf p) = ap exf (subst-uq p)
+subst-uq {d} s-var-eq rewrite ≤-trich-c2 {d} = refl
+subst-uq (s-var-lt x) rewrite ≤-trich-c1 x = refl
+subst-uq (s-var-gt x) rewrite ≤-trich-c3 x = refl
+
 -- proof only proceeds the easy way with K, not sure if it even remains true otherwise
 -- might scrap the substitution relation if it's relevant
 -- subst-irrel : ∀ {d v e e'} (p1 p2 : subst-rel d v e e') → p1 ≡ p2
@@ -129,6 +150,8 @@ lift-subst {d1} p v (* .i) | tri> ¬a ¬b (s≤s {i} {d2} c) rewrite ≤?-c2 {d1
                                                                | ≤?-c2 {suc d1} {i} (λ q → ≤<-nosym c (≤-step p ≤-trans q))
                                                                | ≤-trich-c3 {suc d2} {i} (s≤s c) = refl
 
+lift-subst-rel : ∀ {d1 d2} (p : d2 ≤ d1) v {e e'} → subst-rel d2 v e e' → subst-rel d2 (lift d1 v) (lift (suc d1) e) (lift d1 e')
+lift-subst-rel p v {e} q rewrite subst-uq q ⁻¹ | lift-subst p v e = proj₂ (subst-fun _ _ _)
 
 lift^_++_ : ∀ n m {d} {e} → lift^ (n + m) at d of e ≡ lift^ n at d of lift^ m at d of e
 lift^ zero  ++ m = refl
@@ -153,23 +176,50 @@ depth (* i) = suc i
 depth _ = 0
 
 subst-subst : ∀ {d1 d2} (p : d2 ≤ d1) v1 v2 e → subst-v d2 v2 (subst-v (suc d1) v1 e) ≡ subst-v d1 (subst-v d2 v2 v1) (subst-v d2 v2 e)
-subst-subst p v1 v2 (typ x) = {!!}
-subst-subst p v1 v2 bot = {!!}
-subst-subst p v1 v2 top = {!!}
-subst-subst p v1 v2 unt = {!!}
-subst-subst p v1 v2 (pi e e₁) = {!!}
-subst-subst p v1 v2 (lam e e₁) = {!!}
-subst-subst p v1 v2 (sig e e₁) = {!!}
-subst-subst p v1 v2 (smk e e₁) = {!!}
-subst-subst p v1 v2 (pi1 e) = {!!}
-subst-subst p v1 v2 (pi2 e) = {!!}
-subst-subst p v1 v2 (e ⊛ e₁) = {!!}
-subst-subst p v1 v2 τ = {!!}
-subst-subst p v1 v2 ℓ = {!!}
-subst-subst p v1 v2 (e ⊕ e₁) = {!!}
-subst-subst p v1 v2 (ind e e₁ e₂) = {!!}
-subst-subst p v1 v2 (exf e) = {!!}
-subst-subst {d1} {d2} p v1 v2 (* x) with ≤-trich d2 x
-subst-subst p v1 v2 (* x) | tri< a ¬b ¬c = {!!}
-subst-subst p v1 v2 (* i) | tri≈ ¬a refl ¬c rewrite ≤-trich-c3 (s≤s p) | ≤-trich-c2 {i} = {!!}
-subst-subst p v1 v2 (* x) | tri> ¬a ¬b c rewrite ≤-trich-c3 (c ≤-trans ≤-step p) | ≤-trich-c3 c | ≤-trich-c3 (c ≤-trans p) = refl
+subst-subst = ⋆⋆TODO⋆⋆
+
+subst-subst-rel : ∀ {d1 d2} (p : d2 ≤ d1) {v1 v1' v2 e e₁' e₂' e''}
+                  → subst-rel (suc d1) v1 e e₁' → subst-rel d2 v2 e₁' e''
+                  → subst-rel d2 v2 e e₂' → subst-rel d2 v2 v1 v1'
+                  → subst-rel d1 v1' e₂' e''
+subst-subst-rel {d1} {d2} p {v1} {v1'} {v2} {e} {e₁'} {e₂'} {e''} pv1e pv2e₁ pv2e pv2v1 with subst-uq pv1e | subst-uq pv2e₁ | subst-uq pv2e | subst-uq pv2v1
+subst-subst-rel {d1} {d2} p {v1} {v2 = v2} {e} pv1e pv2e₁ pv2e pv2v1 | refl | refl | refl | refl rewrite subst-subst p v1 v2 e = proj₂ $ subst-fun d1 (subst-v d2 v2 v1) (subst-v d2 v2 e)
+
+unlift : ℕ → Ptm → Ptm
+unlift n (pi A B) = pi (unlift n A) (unlift (suc n) B)
+unlift n (lam A b) = lam (unlift n A) (unlift (suc n) b)
+unlift n (sig A B) = sig (unlift n A) (unlift (suc n) B)
+unlift n (ind P lc bc) = ind (unlift (suc n) P) (unlift n lc) (unlift n bc)
+unlift n (* x) with n ≤? x
+unlift n (* x) | yes p = * pred x
+unlift n (* x) | no ¬p = * x
+unlift n (f ⊛ x) = unlift n f ⊛ unlift n x
+unlift n (l ⊕ r) = unlift n l ⊕ unlift n r
+unlift n (smk a b) = smk (unlift n a) (unlift n b)
+unlift n (pi1 t) = pi1 (unlift n t)
+unlift n (pi2 t) = pi2 (unlift n t)
+unlift n (exf t) = exf (unlift n t)
+unlift n x = x
+
+unw = unlift 0
+
+unlift-lift : ∀ n e → unlift n (lift n e) ≡ e
+unlift-lift n (typ x) = refl
+unlift-lift n bot = refl
+unlift-lift n top = refl
+unlift-lift n unt = refl
+unlift-lift n (pi A B) rewrite unlift-lift n A | unlift-lift (suc n) B = refl
+unlift-lift n (lam A b) rewrite unlift-lift n A | unlift-lift (suc n) b = refl
+unlift-lift n (sig A B) rewrite unlift-lift n A | unlift-lift (suc n) B = refl
+unlift-lift n (smk a b) rewrite unlift-lift n a | unlift-lift n b = refl
+unlift-lift n (pi1 e) = ap pi1 (unlift-lift n e)
+unlift-lift n (pi2 e) = ap pi2 (unlift-lift n e)
+unlift-lift n (f ⊛ x) rewrite unlift-lift n f | unlift-lift n x = refl
+unlift-lift n τ = refl
+unlift-lift n ℓ = refl
+unlift-lift n (l ⊕ r) rewrite unlift-lift n l | unlift-lift n r = refl
+unlift-lift n (ind P lc bc) rewrite unlift-lift (suc n) P | unlift-lift n lc | unlift-lift n bc = refl
+unlift-lift n (exf X) = ap exf (unlift-lift n X)
+unlift-lift n (* x) with n ≤? x
+unlift-lift n (* x) | yes p rewrite ≤?-c1 (≤-step p) = refl
+unlift-lift n (* x) | no ¬p rewrite ≤?-c2 ¬p = refl
