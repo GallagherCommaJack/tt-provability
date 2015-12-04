@@ -1,4 +1,4 @@
-{-# OPTIONS --without-K #-}
+{-# OPTIONS --without-K --rewriting #-}
 
 module lib where
 open import Level public renaming (_⊔_ to lmax; suc to lsuc; zero to lzero; lift to ulift)
@@ -8,7 +8,8 @@ open import Relation.Binary.Core public
 open import Relation.Binary.PropositionalEquality public renaming ([_] to ⟨_⟩)
 open import Relation.Nullary public
 open import Data.Product public hiding (map; zip)
-open import Data.List public
+open import Data.List using (List) public
+open import Data.List as L public
 open import Function public
 open import Data.Empty public
 open import Data.Maybe.Base public hiding (map)

@@ -1,5 +1,5 @@
+{-# OPTIONS --rewriting #-}
 -- Uses the syntax representation from http://www.cs.nott.ac.uk/~txa/publ/tt-in-tt.pdf with added Löbian constructors as suggested by Jason Gross
-{-# OPTIONS --without-K --no-eta #-}
 module Syntax.Typed.Def where
 open import lib renaming (id to idf)
 
@@ -27,7 +27,7 @@ infixl 5 _,,_
 
 data Ty where
   _[_]T   : ∀{Γ Δ} → Ty Δ → Tms Γ Δ → Ty Γ
-  ‘Π’       : ∀{Γ}(A : Ty Γ)(B : Ty (Γ ,, A)) → Ty Γ
+  ‘Π’     : ∀{Γ}(A : Ty Γ)(B : Ty (Γ ,, A)) → Ty Γ
   U       : ∀{Γ} → Ty Γ
   El      : ∀{Γ}(A : Tm Γ U) → Ty Γ
   ‘top’   : ∀{Γ} → Ty Γ
@@ -133,8 +133,8 @@ postulate
    assoc : ∀{Δ Γ Σ Ω}{σ : Tms Σ Ω}{δ : Tms Γ Σ}{ν : Tms Δ Γ}
          → (σ ⊚ δ) ⊚ ν ≡ σ ⊚ (δ ⊚ ν)
    ,,⊚    : ∀{Γ Δ Σ}{δ : Tms Γ Δ}{σ : Tms Σ Γ}{A : Ty Δ}{a : Tm Γ (A [ δ ]T)}
-         → (δ ,, a) ⊚ σ ≡ (δ ⊚ σ) ,, a [ σ ]t -- coe (TmΓ= [][]T) (a [ σ ]t)
-   π₁β   : ∀{Γ Δ}{A : Ty Δ}{δ : Tms Γ Δ}{a : Tm Γ (A [ δ ]T)} → π₁ (δ ,, a) ≡ δ
+         → (_,,_ δ {A} a) ⊚ σ ≡ (δ ⊚ σ) ,, a [ σ ]t -- coe (TmΓ= [][]T) (a [ σ ]t)
+   π₁β   : ∀{Γ Δ}{A : Ty Δ}{δ : Tms Γ Δ}{a : Tm Γ (A [ δ ]T)} → π₁ (_,,_ δ {A} a) ≡ δ
    πη    : ∀{Γ Δ}{A : Ty Δ}{δ : Tms Γ (Δ ,, A)} → (π₁ δ ,, π₂ δ) ≡ δ
    εη    : ∀{Γ}{σ : Tms Γ ε} → σ ≡ ε
    sets  : ∀{Γ Δ}{δ σ : Tms Γ Δ}{e0 e1 : δ ≡ σ} → e0 ≡ e1
@@ -143,7 +143,7 @@ postulate
 {-# REWRITE idr #-}
 {-# REWRITE ,,⊚ #-}
 {-# REWRITE π₁β #-}
--- {-# REWRITE πη #-}
+{-# REWRITE πη #-}
 
 postulate
    -- higher constructors for Tm
@@ -151,7 +151,7 @@ postulate
    [][]t : ∀{Γ Δ Σ}{A : Ty Σ}{t : Tm Σ A}{σ : Tms Γ Δ}{δ : Tms Δ Σ}
          → (t [ δ ]t) [ σ ]t ≡ t [ δ ⊚ σ ]t
    π₂β   : ∀{Γ Δ}{A : Ty Δ}{δ : Tms Γ Δ}{a : Tm Γ (A [ δ ]T)}
-         → π₂ (δ ,, a) ≡ a
+         → π₂ (_,,_ δ {A} a) ≡ a
    lam[] : ∀{Γ Δ}{δ : Tms Γ Δ}{A : Ty Δ}{B : Ty (Δ ,, A)}{t : Tm (Δ ,, A) B}
          → (lam t) [ δ ]t ≡ lam (t [ δ ^ A ]t)
    ‘Π’β    : ∀{Γ}{A : Ty Γ}{B : Ty (Γ ,, A)}{t : Tm (Γ ,, A) B}
@@ -192,7 +192,9 @@ app[] {Γ}{Δ}{δ}{A}{B}{t}
 π₁⊚ : ∀{Γ Δ Θ}{A : Ty Δ}{δ : Tms Γ (Δ ,, A)}{ρ : Tms Θ Γ}
      → π₁ δ ⊚ ρ ≡ π₁ (δ ⊚ ρ)
 π₁⊚ {Γ}{Δ}{Θ}{A}{δ}{ρ}
-  = π₁β {δ = π₁ δ ⊚ ρ} {π₂ δ [ ρ ]t} ⁻¹ ◾ ap π₁ (,,⊚ {δ = π₁ δ} {ρ} {a = π₂ δ} ⁻¹) ◾ ap (λ σ → π₁ (σ ⊚ ρ)) πη
+  = π₁ {A = A} δ ⊚ ρ ≡⟨ π₁β {A = A} {π₁ δ ⊚ ρ} {π₂ δ [ ρ ]t} ⟩
+    π₁ {A = A} (π₁ δ ⊚ ρ ,, π₂ δ [ ρ ]t) ≡⟨ ap π₁ (,,⊚ {δ = π₁ δ} {ρ} {A} {π₂ δ} ⁻¹) ⟩
+    π₁ {A = A} (δ ⊚ ρ) ∎
 
 {-# REWRITE π₁⊚ #-}
 postulate
@@ -202,7 +204,7 @@ wk×2 : ∀ {Γ A B} → Tms (Γ ,, A ,, B) Γ
 wk×2 = π₁ (π₁ id)
 
 wk⊚wk=wk×2 : ∀ {Γ A B} → wk ⊚ wk ≡ wk×2 {Γ} {A} {B}
-wk⊚wk=wk×2 = ap π₁ idl
+wk⊚wk=wk×2 {Γ} {A} {B} = refl
 
 wk1 : ∀{Γ A B} → Tms (Γ ,, B ,, A [ wk ]T) (Γ ,, A)
 wk1 {Γ} {A} {B} = (wk ⊚ wk) ,, vz {A = A [ wk ]T}
